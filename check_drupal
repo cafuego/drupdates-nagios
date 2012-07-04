@@ -1,0 +1,92 @@
+#!/bin/bash
+#
+# Check a given output file for security and non-security Drupal
+# module and theme updates.
+
+STATUS_OK=0
+STATUS_WARNING=1
+STATUS_CRITICAL=2
+STATUS_UNKNOWN=3
+
+status="OK"
+ret=${STATUS_OK}
+string=""
+
+if [ $# -ne 1 ]; then
+  echo "UNKNOWN: Usage: `basename ${0}` filename"
+  exit ${STATUS_UNKNOWN}
+elif [ ! -e "${1}" ]; then
+  echo "UNKNOWN: Logfile \`${1}' does not exist"
+  exit ${STATUS_UNKNOWN}
+fi
+
+c_count=0
+c_names=""
+u_count=0
+u_names=""
+s_count=0
+s_names=""
+n_count=0
+n_names=""
+
+# Go through the logfile and get the names of the security updates.
+# Also check whether modules have gone (more) stable or are just new
+# -dev releases.
+while read -r line; do
+  set -- $line
+  # $1=modulename $2=current_version $3=new_version $4=text
+  if [[ "${4}" == *SECURITY-UPDATE* ]]; then				# Security update.
+    c_count=$((${s_count} + 1))
+    c_names="${s_names} ${1}"
+  elif [[ "${4}" == *not-supported* ]]; then				# Unsupported.
+    u_count=$((${u_count} + 1))
+    u_names="${u_names} ${1}-${2}"
+  elif [[ "{$2}" == *-alpha* && "${3}" != *-alpha* ]]; then	# Became stabler.
+    s_count=$((${s_count} + 1))
+    s_names="${s_names} ${1}"
+  elif [[ "{$2}" == *-beta* && "${3}" != *-beta* ]]; then	# Became stabler.
+    s_count=$((${s_count} + 1))
+    s_names="${s_names} ${1}"
+  elif [[ "{$2}" == *-rc* && "${3}" != *-rc* ]]; then		# Became stabler.
+    s_count=$((${s_count} + 1))
+    s_names="${s_names} ${1}"
+  elif [[ "{$2}" == *-dev* && "${3}" != *-dev* ]]; then		# Became stabler.
+    s_count=$((${s_count} + 1))
+    s_names="${s_names} ${1}"
+  else														# Normal update.
+    n_count=$((${n_count} + 1))
+    n_names="${n_names} ${1}"
+  fi
+done < ${1}
+
+# @todo: I'd like to leave out normal updates but
+# turn beta -> stable into warnings.
+# SECURITY=`grep SECURITY ${1} | wc -l`
+# UPDATES=`grep -v SECURITY ${1} | wc -l`
+
+# Create a return value and status string.
+if [ ${c_count} -gt 0 ]; then
+  string="${c_count} security updates (${c_names## });"
+fi
+if [ ${u_count} -gt 0 ]; then
+  string="${string} ${u_count} not supported (${u_names## });"
+fi
+if [ ${s_count} -gt 0 ]; then
+  string="${string} ${s_count} stability updates (${s_names## });"
+fi
+if [ ${n_count} -gt 0 ]; then
+  string="${string} ${n_count} normal updates (${n_names## });"
+fi
+
+# Create a return value and status string.
+if [ ${c_count} -gt 0 ]; then
+  status="CRITICAL"
+  ret=${STATUS_CRITICAL}
+elif [ ${u_count} -gt 0 ]; then
+  status="WARNING"
+  ret=${STATUS_WARNING}
+fi
+
+# Output the status and inform the user about which hosts are lagging.
+echo -n "${status}:${string}"
+exit $ret

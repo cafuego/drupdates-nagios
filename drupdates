@@ -1,0 +1,40 @@
+#!/bin/bash
+#
+ME=$(basename $0)
+
+if [ $# -gt 2 -o $# -lt 1 ]; then
+  echo "Usage: ${ME} drupalroot [outputfile]"
+  exit 1
+fi
+
+# Always demand a directory path.
+BASEDIR=${1}
+
+if [ $# -eq 2 ]; then
+  OUTPUT="${2}"
+else
+  OUTPUT=/var/cache/drupal-updates
+fi
+
+TEMP=/tmp/${ME}.$$.tmp
+/bin/rm -f ${TEMP}
+
+cd ${BASEDIR}/sites || exit 0
+
+for site in `find ./ -maxdepth 1 -type d | cut -d/ -f2 | egrep -v '(.bzr|.svn|.git|all|default|^$)' | sort`
+do
+  if [ -f "${site}/settings.php" ]; then
+    TMP=/tmp/${ME}.${site}$$.tmp
+    drush upc --pipe --no-core -l ${site} > ${TMP}
+    cat ${TMP} >> ${TEMP}
+    /bin/rm -f ${TMP}
+  fi
+done
+
+# Remove empty lines and uniq on first 18 or so chars to
+# avoid duplicates for multi-lingual sites.
+grep -v '^$' ${TEMP} | sort -r | uniq -w 18 -u | sort > ${OUTPUT}
+
+/bin/rm -f ${TEMP}
+
+# And thus ${OUTPUT} is left.
