@@ -16,6 +16,8 @@ if [ $# -gt 2 -o $# -lt 1 ]; then
 fi
 
 # Always demand a directory path.
+# This is not quoted, becasue if your Drupals site under a directory
+# path with spaces you really deserve all the problems you get.
 BASEDIR=${1}
 
 if [ $# -eq 2 ]; then
