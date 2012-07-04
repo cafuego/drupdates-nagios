@@ -4,6 +4,8 @@
 # a Drupal multisite installation and writes them to a log file
 # that can be parsed by the included nagios checker.
 #
+# Run this via cron maybe once or twice a day.
+#
 # @todo: Error checking/handling and cleanup. (sif)
 
 ME=$(basename $0)
