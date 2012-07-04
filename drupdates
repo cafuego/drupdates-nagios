@@ -1,5 +1,11 @@
 #!/bin/bash
 #
+# Wrapper for drush that pulls available updates for all sites in
+# a Drupal multisite installation and writes them to a log file
+# that can be parsed by the included nagios checker.
+#
+# @todo: Error checking/handling and cleanup. (sif)
+
 ME=$(basename $0)
 
 if [ $# -gt 2 -o $# -lt 1 ]; then
@@ -33,6 +39,7 @@ done
 
 # Remove empty lines and uniq on first 18 or so chars to
 # avoid duplicates for multi-lingual sites.
+# 18 is magic, but it seems to work for me. YMMV :-)
 grep -v '^$' ${TEMP} | sort -r | uniq -w 18 -u | sort > ${OUTPUT}
 
 /bin/rm -f ${TEMP}
